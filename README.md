@@ -1,5 +1,5 @@
 # Wavelet_CNN_Classifier
-![CNN Arquitecture][model_WCNN_arc1a.png]
+![CNN Arquitecture](model_WCNN_arc1a.png)
 
 ## Descripción del Código
 
