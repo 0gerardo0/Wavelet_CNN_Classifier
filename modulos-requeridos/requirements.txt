@@ -1,0 +1,11 @@
+numpy 
+matplotlib 
+scikit-learn
+PyWavelets
+opencv-python
+ipython
+PyQt5
+scikit-image
+keras
+tensorflow
+pydot
