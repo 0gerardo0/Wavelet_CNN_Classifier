@@ -9,6 +9,10 @@ from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, Model
 from keras.layers import Input, Conv2D, MaxPooling2D, concatenate, GlobalAveragePooling2D, Dropout, Dense
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+import tensorflow as tf
+print("CUDA GPU available:", tf.config.list_physical_devices('GPU'))
+
+input("Tensorflow")
 
 # Definir una función de normalización
 def normalize_data(data):
