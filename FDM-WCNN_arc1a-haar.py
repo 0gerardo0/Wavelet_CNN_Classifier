@@ -199,7 +199,7 @@ img_width, img_height = 300, 300
 img_width1, img_height1 = 150, 150
 img_width2, img_height2 = 75, 75
 img_width3, img_height3 = 38, 38
-data_augmentation = True  # Cambia a True para habilitar la data augmentation
+data_generation = True  # Cambia a True para habilitar la data augmentation
 weight_decay = 0.0005
 #-------------------------------------------------------------#
 #-------------Arquitectura del modelo CNN---------------------#
@@ -217,33 +217,31 @@ model.add(Dropout(0.2, name='Dropout'))
 model.add(Dense(10, activation='softmax', name='Output'))
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
+
 # Generar el diagrama de la arquitectura
 plot_model(model, to_file='model_WCNN_arc1a-2.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
 early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-if not data_augmentation:
-    print('Not using data augmentation.')
-    # Entrenamos el modelo sin data augmentation
-    history = model.fit(X_train_normalized[1], y_train_normalized[1], epochs=epochs, batch_size=batch_size,
-                        validation_split=0.1, callbacks=[checkpointer, early, LearningRateScheduler(lr_schedule), csv_logger, reduce_lr])
-else:
-    print('Using real-time data augmentation.')
-    # Configuramos el generador de imágenes con las transformaciones deseadas
-    datagen = ImageDataGenerator(
-        rotation_range=20,  # Rango de rotación aleatoria en grados
-        width_shift_range=0.2,  # Rango de traslación horizontal aleatoria
-        height_shift_range=0.2,  # Rango de traslación vertical aleatoria
-        shear_range=0.2,  # Rango de corte aleatorio
-        zoom_range=0.2,  # Rango de zoom aleatorio
-        horizontal_flip=True,  # Volteo horizontal aleatorio
-        fill_mode='nearest'  # Modo de llenado para valores fuera: de los límites de la imagen
-    )
 
-    # Ajustamos el generador a los datos de entrenamiento
-    datagen.fit(X_train_normalized[1])
+print('Using real-time data augmentation.')
+# Configuramos el generador de imágenes con las transformaciones deseadas
+datagen = ImageDataGenerator(
+    rotation_range=20,  # Rango de rotación aleatoria en grados
+    width_shift_range=0.2,  # Rango de traslación horizontal aleatoria
+    height_shift_range=0.2,  # Rango de traslación vertical aleatoria
+    shear_range=0.2,  # Rango de corte aleatorio
+    zoom_range=0.2,  # Rango de zoom aleatorio
+    horizontal_flip=True,  # Volteo horizontal aleatorio
+    fill_mode='nearest'  # Modo de llenado para valores fuera: de los límites de la imagen
+)
 
-    # Entrenamos el modelo con data augmentation
-    history = model.fit(datagen.flow(X_train_normalized[1], y_train_normalized[1], batch_size=batch_size),
-                        epochs=epochs, validation_split=0.1, callbacks=[checkpointer, early, LearningRateScheduler(lr_schedule), csv_logger, reduce_lr])
+# Ajustamos el generador a los datos de entrenamiento
+datagen.fit(X_train_normalized[2])
+
+# Entrenamos el modelo con data augmentation
+history = model.fit(datagen.flow(X_train_normalized[2], y_train_normalized[2], batch_size=batch_size),
+                    epochs=epochs, 
+                    validation_split=0.1, 
+                    callbacks=[checkpointer, early, LearningRateScheduler(lr_schedule), csv_logger, reduce_lr])
 #------------------------------------------------------------#
 #-------------Metricas de evalucion del modelo---------------#
 loss, accuracy = model.evaluate(X_test_normalized[2], y_test_normalized[2])
