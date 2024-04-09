@@ -3,10 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from keras.preprocessing import image
 from keras.utils import to_categorical, plot_model
+from keras.preprocessing import ImageDataGenerator
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, Model
+from keras.callbacks import EarlyStopping
 from keras.layers import Input, Conv2D, MaxPooling2D, concatenate, GlobalAveragePooling2D, Dropout, Dense
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
@@ -159,10 +161,10 @@ dataDWT3=np.concatenate((dataDWT_cA3, dataDWT_cH3, dataDWT_cV3,dataDWT_cD3), axi
 print(dataDWT3.shape)
 
 # Entrenamiento y prueba
-X_train0, X_test0, y_train0, y_test0 = train_test_split(data, labels_or, test_size=0.20, random_state=42)
-X_train1, X_test1, y_train1, y_test1 = train_test_split(dataDWT1, labels_DWT_oh, test_size=0.20, random_state=42)
-X_train2, X_test2, y_train2, y_test2 = train_test_split(dataDWT2, labels_DWT_oh, test_size=0.20, random_state=42)
-X_train3, X_test3, y_train3, y_test3 = train_test_split(dataDWT3, labels_DWT_oh, test_size=0.20, random_state=42)
+X_train0, X_test0, y_train0, y_test0 = train_test_split(data, labels_or, test_size=0.15, random_state=42)
+X_train1, X_test1, y_train1, y_test1 = train_test_split(dataDWT1, labels_DWT_oh, test_size=0.15, random_state=42)
+X_train2, X_test2, y_train2, y_test2 = train_test_split(dataDWT2, labels_DWT_oh, test_size=0.15, random_state=42)
+X_train3, X_test3, y_train3, y_test3 = train_test_split(dataDWT3, labels_DWT_oh, test_size=0.15, random_state=42)
 
 # Definir los conjuntos de datos y sus nombres
 datasets = [X_train0, X_test0, y_train0, y_test0, X_train1, X_test1, y_train1, y_test1, X_train2, X_test2, y_train2, y_test2, X_train3, X_test3, y_train3, y_test3]
@@ -179,7 +181,7 @@ scaler = MinMaxScaler()
 X_train_normalized = list(map(normalize_data, [X_train1, X_train2, X_train3]))
 X_test_normalized = list(map(normalize_data, [X_test1, X_test2, X_test3]))
 y_train_normalized = list(map(normalize_data, [y_train1, y_train2, y_train3]))
-y_test_normalized = list(map(normalize_data, [y_test1, y_test2, y_test3]))
+y_test_normalized = list(map(normalize_data, [y_test1, y_test2, y_test3]))1
 
 # Imprimir la forma de cada conjunto de datos normalizado
 for i, (X_train, X_test, y_train, y_test) in enumerate(zip(X_train_normalized, X_test_normalized, y_train_normalized, y_test_normalized), start=1):
@@ -189,7 +191,17 @@ for i, (X_train, X_test, y_train, y_test) in enumerate(zip(X_train_normalized, X
     print(f"y_train shape: {y_train.shape}")
     print(f"y_test shape: {y_test.shape}")
     print()
-
+#-----------------Parametros de la red------------------------#
+INIT_LR = 1e-3  # Valor inicial de learning rate.
+epochs = 100  # Cantidad de iteraciones completas al conjunto de imágenes de entrenamiento
+batch_size = 32  # Cantidad de imágenes que se toman a la vez en memoria
+img_width, img_height = 300, 300
+img_width1, img_height1 = 150, 150
+img_width2, img_height2 = 75, 75
+img_width3, img_height3 = 38, 38
+data_augmentation = True  # Cambia a True para habilitar la data augmentation
+weight_decay = 0.0005
+#-------------------------------------------------------------#
 #-------------Arquitectura del modelo CNN---------------------#
 model = Sequential()
 model.add(Conv2D(64, (3, 3), strides=1, padding='same', activation='relu', input_shape=(38, 38, 1), name='Conv2D_1'))
@@ -206,11 +218,35 @@ model.add(Dense(10, activation='softmax', name='Output'))
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
 # Generar el diagrama de la arquitectura
-plot_model(model, to_file='model_WCNN_arc1a.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
-historial = model.fit(X_train_normalized[1], y_train_normalized[1], epochs=100,batch_size=32 , validation_split=0.1)
+plot_model(model, to_file='model_WCNN_arc1a-2.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+if not data_augmentation:
+    print('Not using data augmentation.')
+    # Entrenamos el modelo sin data augmentation
+    history = model.fit(X_train_normalized[1], y_train_normalized[1], epochs=epochs, batch_size=batch_size,
+                        validation_split=0.1, callbacks=[checkpointer, early, LearningRateScheduler(lr_schedule), csv_logger, reduce_lr])
+else:
+    print('Using real-time data augmentation.')
+    # Configuramos el generador de imágenes con las transformaciones deseadas
+    datagen = ImageDataGenerator(
+        rotation_range=20,  # Rango de rotación aleatoria en grados
+        width_shift_range=0.2,  # Rango de traslación horizontal aleatoria
+        height_shift_range=0.2,  # Rango de traslación vertical aleatoria
+        shear_range=0.2,  # Rango de corte aleatorio
+        zoom_range=0.2,  # Rango de zoom aleatorio
+        horizontal_flip=True,  # Volteo horizontal aleatorio
+        fill_mode='nearest'  # Modo de llenado para valores fuera: de los límites de la imagen
+    )
+
+    # Ajustamos el generador a los datos de entrenamiento
+    datagen.fit(X_train_normalized[1])
+
+    # Entrenamos el modelo con data augmentation
+    history = model.fit(datagen.flow(X_train_normalized[1], y_train_normalized[1], batch_size=batch_size),
+                        epochs=epochs, validation_split=0.1, callbacks=[checkpointer, early, LearningRateScheduler(lr_schedule), csv_logger, reduce_lr])
 #------------------------------------------------------------#
 #-------------Metricas de evalucion del modelo---------------#
-loss, accuracy = model.evaluate(X_test_normalized[1], y_test_normalized[1])
+loss, accuracy = model.evaluate(X_test_normalized[2], y_test_normalized[2])
 print(f'Precisión del modelo en los datos de prueba: {accuracy*100:.2f} \n Funcion de perdida: {loss*100:.2f}')
 
 # Predicciones del conjunto de prueba
