@@ -8,11 +8,13 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 from keras.models import Sequential, Model
-from keras.callbacks import EarlyStopping, CSVLogger, ReduceLROnPlateau
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.optimizers import Adam
 from keras.preprocessing import image
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from keras.utils import to_categorical, plot_model
-from keras.layers import Input, Conv2D, MaxPooling2D, concatenate, GlobalAveragePooling2D, Dropout, Dense, Rescaling, RandomFlip
+from keras.layers import Input, Conv2D, MaxPooling2D, concatenate, GlobalAveragePooling2D, Dropout, Dense
+from keras.layers import Rescaling, RandomFlip, RandomBrightness, RandomContrast, RandomTranslation, RandomCrop
 
 from utils.manager_checkpointers import get_checkpoints
 from utils.manage_csv_logger import get_csv_logger
@@ -83,9 +85,8 @@ print(labels_or.shape)
 for label in labels:
     repeated_labels = np.array([label] * 4)
     labelsDWT = np.concatenate((labelsDWT, repeated_labels))
-# Verificar la longitud de las nuevas etiquetas (debería ser igual al número de características extraídas)
+# Verificar la longitud de las nuevas etiquetas (debería ser igual al número de características extraídas + 1)
 print("Número de nuevas etiquetas:", len(labelsDWT))
-
 #---------------Extraccion de caracteristicas Wavelet---------------#
 for imagen_array in data:
     if len(imagen_array.shape) == 3:
@@ -168,10 +169,10 @@ dataDWT3=np.concatenate((dataDWT_cA3, dataDWT_cH3, dataDWT_cV3,dataDWT_cD3), axi
 print(dataDWT3.shape)
 
 # Entrenamiento y prueba
-X_train0, X_test0, y_train0, y_test0 = train_test_split(data, labels_or, test_size=0.15, random_state=42)
-X_train1, X_test1, y_train1, y_test1 = train_test_split(dataDWT1, labels_DWT_oh, test_size=0.15, random_state=42)
-X_train2, X_test2, y_train2, y_test2 = train_test_split(dataDWT2, labels_DWT_oh, test_size=0.15, random_state=42)
-X_train3, X_test3, y_train3, y_test3 = train_test_split(dataDWT3, labels_DWT_oh, test_size=0.15, random_state=42)
+X_train0, X_test0, y_train0, y_test0 = train_test_split(data, labels_or, test_size=0.20, random_state=42)
+X_train1, X_test1, y_train1, y_test1 = train_test_split(dataDWT1, labels_DWT_oh, test_size=0.20, random_state=42)
+X_train2, X_test2, y_train2, y_test2 = train_test_split(dataDWT2, labels_DWT_oh, test_size=0.20, random_state=42)
+X_train3, X_test3, y_train3, y_test3 = train_test_split(dataDWT3, labels_DWT_oh, test_size=0.20, random_state=42)
 
 # Definir los conjuntos de datos y sus nombres
 datasets = [X_train0, X_test0, y_train0, y_test0, X_train1, X_test1, y_train1, y_test1, X_train2, X_test2, y_train2, y_test2, X_train3, X_test3, y_train3, y_test3]
@@ -183,18 +184,21 @@ for dataset, name in zip(datasets, dataset_names):
 
 # Aplicar la función de normalización utilizando map
 X_train_normalized = list(map(normalize_data, [X_train1, X_train2, X_train3]))
+X_train_normalized_reshaped = np.expand_dims(X_train_normalized[2], axis=-1)
+print("Forma original:", X_train_normalized[2].shape)
+print("Nueva forma:", X_train_normalized_reshaped.shape)
 X_test_normalized = list(map(normalize_data, [X_test1, X_test2, X_test3]))
-y_train_normalized = list(map(None, [y_train1, y_train2, y_train3]))
-y_test_normalized = list(map(None, [y_test1, y_test2, y_test3]))
+y_train_normalized = [y_train1, y_train2, y_train3]
+y_test_normalized = [y_test1, y_test2, y_test3]
 
-# Imprimir la forma de cada conjunto de datos normalizado
-for i, (X_train, X_test, y_train, y_test) in enumerate(zip(X_train_normalized, X_test_normalized, y_train_normalized, y_test_normalized), start=1):
-    print(f"Conjunto de datos {i}:")
-    print(f"X_train shape: {X_train.shape}")
-    print(f"X_test shape: {X_test.shape}")
-    print(f"y_train shape: {y_train.shape}")
-    print(f"y_test shape: {y_test.shape}")
-    print()
+# # Imprimir la forma de cada conjunto de datos normalizado
+# for i, (X_train, X_test, y_train, y_test) in enumerate(zip(X_train_normalized, X_test_normalized, y_train_normalized, y_test_normalized), start=1):
+#     print(f"Conjunto de datos {i}:")
+#     print(f"X_train shape: {X_train.shape}")
+#     print(f"X_test shape: {X_test.shape}")
+#     print(f"y_train shape: {y_train.shape}")
+#     print(f"y_test shape: {y_test.shape}")
+#     print()
 #-----------------Parametros de la red------------------------#
 INIT_LR = 1e-3  # Valor inicial de learning rate.
 epochs = 100  # Cantidad de iteraciones completas al conjunto de imágenes de entrenamiento
@@ -203,26 +207,30 @@ img_width, img_height = 300, 300
 img_width1, img_height1 = 150, 150
 img_width2, img_height2 = 75, 75
 img_width3, img_height3 = 38, 38
-weight_decay = 0.0005
+n_class=10
 experimento=1
 #-------------------------------------------------------------#
 #-------------Arquitectura del modelo CNN---------------------#
+RandomCrop
 model = Sequential()
+model.add(Input(shape=(img_height3, img_height3, 1)))
 model.add(Rescaling(1./255, name='Rescaling'))
-model.add(RandomFlip("horizontal_and_vertical", seed=None, name='RandomFlip'))
-model.add(Conv2D(64, (3, 3), strides=1, padding='same', activation='relu', input_shape=(img_height3, img_height3, 1), name='Conv2D_1'))
+model.add(Conv2D(64, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_1'))
+model.add(RandomBrightness(factor=0.2, name='Bringhtness'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='MaxPool_1'))
 model.add(Conv2D(128, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_2'))
+model.add(RandomTranslation(height_factor=(-0.2, 0.3), width_factor=(-0.2, 0.3),fill_mode="reflect", name='RandomTranslation'))
 model.add(Conv2D(128, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_3'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='MaxPool_2'))
 model.add(Conv2D(256, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_4'))
+model.add(RandomFlip("horizontal_and_vertical", seed=None, name='RandomFlip'))
 model.add(Conv2D(256, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_5'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='MaxPool_3'))
 model.add(GlobalAveragePooling2D(name='GlobalAvgPool'))
 model.add(Dropout(0.2, name='Dropout'))
-model.add(Dense(10, activation='softmax', name='Output'))
+model.add(Dense(n_class, activation='softmax', name='Output'))
 
-adam_optimizer = Adam(lr=INIT_LR, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=weight_decay)
+adam_optimizer = Adam(learning_rate=INIT_LR, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
 model.compile(optimizer=adam_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
 
@@ -232,11 +240,11 @@ csv_logger = get_csv_logger(wavelet, experimento)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, min_lr=0.001)
 
 # Generar el diagrama de la arquitectura
-plot_model(model, to_file='model_WCNN_arc1a-2.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
+plot_model(model, to_file='plot_model/model_WCNN_arc2a-5.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
 
 print('Using real-time data augmentation.')
 # Configuramos el generador de imágenes con las transformaciones deseadas
-datagen = image.ImageDataGenerator(
+datagen = ImageDataGenerator(
     rotation_range=20,  # Rango de rotación aleatoria en grados
     width_shift_range=0.2,  # Rango de traslación horizontal aleatoria
     height_shift_range=0.2,  # Rango de traslación vertical aleatoria
@@ -247,14 +255,14 @@ datagen = image.ImageDataGenerator(
 )
 
 # Ajustamos el generador a los datos de entrenamiento
-datagen.fit(X_train_normalized[2])
+datagen.fit(X_train_normalized_reshaped)
 
 # Entrenamos el modelo con data augmentation
-history = model.fit(datagen.flow(X_train_normalized[2], y_train_normalized[2], batch_size=batch_size),
+history = model.fit(datagen.flow(X_train_normalized_reshaped, y_train_normalized[2], batch_size=batch_size),
                     epochs=epochs, 
                     validation_data=(X_test_normalized[2], y_test_normalized[2]),
                     shuffle=True,
-                    callbacks=[checkpointer, early, csv_logger, reduce_lr])
+                    callbacks=[checkpoints, early, csv_logger, reduce_lr])
 #------------------------------------------------------------#
 #-------------Metricas de evalucion del modelo---------------#
 params_dict = {
@@ -264,7 +272,7 @@ params_dict = {
     "INIT_LR": INIT_LR,
     "epochs": epochs,
     "batch_size": batch_size,
-    "weight_decay": weight_decay,
+    "num_class": n_class,
     "experimento": experimento,
 }
 
