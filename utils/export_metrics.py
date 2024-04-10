@@ -32,7 +32,7 @@ def save_results(loss, accuracy, y_true, y_pred, wavelet, experiment, save_metri
     cal_recall = calculate_recall(y_true, y_pred)
     cal_f1 = calculate_f1_score(y_true, y_pred)
 
-    base_dir = 'metrics'
+    base_dir = 'saves/metrics'
     metrics_result_dir = os.path.join(base_dir, f'{wavelet}-experiment')
     subdirectories = ['conf_matrix', 'csv_results']
     sub_dirs = [os.path.join(metrics_result_dir, sub) for sub in subdirectories]
@@ -82,7 +82,7 @@ def plot_performance(history, wavelet, experiment, save_fig=True, fig_title='Mod
         save_fig (bool, optional): Indica si se debe guardar la figura como un archivo. Por defecto es True.
         fig_title (str, optional): Título de la gráfica. Por defecto es 'Model Performance'.
     """
-    base_dir = 'metrics'
+    base_dir = 'saves/metrics'
     metrics_result_dir = os.path.join(base_dir, f'{wavelet}-experiment')
     subdirectories = ['graph_history']
     sub_dirs = [os.path.join(metrics_result_dir, sub) for sub in subdirectories]
@@ -185,12 +185,11 @@ def save_parameters(params_dict, wavelet, experiment):
         wavelet (str): Tipo de wavelet utilizado en el experimento.
         experiment (int): Número del experimento.
     """
-    base_dir = 'metrics'
+    base_dir = 'saves/metrics'
     params_result_dir = os.path.join(base_dir, f'{wavelet}-experiment')
     os.makedirs(params_result_dir, exist_ok=True)
 
     params_export = os.path.join(params_result_dir, f"model_FDM-{wavelet}-{experiment}-parameters.csv")
-
     with open(params_export, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(["Parameter", "Value"])
