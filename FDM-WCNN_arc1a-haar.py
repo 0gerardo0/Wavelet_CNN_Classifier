@@ -178,8 +178,8 @@ datasets = [X_train0, X_test0, y_train0, y_test0, X_train1, X_test1, y_train1, y
 dataset_names = ["X_train0", "X_test0", "y_train0", "y_test_0","X_train1", "X_test1", "y_train1", "y_test1", "X_train2", "X_test2", "y_train2", "y_test2", "X_train3", "X_test3", "y_train3", "y_test3"]
 
 # Imprimir el tamaño de cada conjunto de datos
-for dataset, name in zip(datasets, dataset_names):
-    print(f"Tamaño de {name}: {dataset.shape}")
+# for dataset, name in zip(datasets, dataset_names):
+#     print(f"Tamaño de {name}: {dataset.shape}")
 
 # Aplicar la función de normalización utilizando map
 X_train_normalized = list(map(normalize_data, [X_train1, X_train2, X_train3]))
@@ -202,20 +202,22 @@ y_test_normalized = [y_test1, y_test2, y_test3]
 INIT_LR = 1e-3  # Valor inicial de learning rate.
 epochs = 100  # Cantidad de iteraciones completas al conjunto de imágenes de entrenamiento
 batch_size = 32  # Cantidad de imágenes que se toman a la vez en memoria
-img_width, img_height = 300, 300
-img_width1, img_height1 = 150, 150
-img_width2, img_height2 = 75, 75
-img_width3, img_height3 = 38, 38
+# img_width, img_height = 300, 300
+# img_width1, img_height1 = 150, 150
+# img_width2, img_height2 = 75, 75
+# img_width3, img_height3 = 38, 38
+img_shape = X_train_normalized_reshaped[0].shape
+print("Esto es una tupla de la forma de la imagen que esta en proceso", img_shape)
 n_class=10
 experimento=1
 #-------------------------------------------------------------#
 #-------------Arquitectura del modelo CNN---------------------#
 RandomCrop
 model = Sequential()
-model.add(Input(shape=(img_height3, img_height3, 1)))
-model.add(Rescaling(1./255, name='Rescaling'))
+model.add(Input(shape=(img_shape)))
+#model.add(Rescaling(1./255, name='Rescaling'))
 model.add(Conv2D(64, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_1'))
-model.add(RandomBrightness(factor=0.2, name='Bringhtness'))
+#model.add(RandomBrightness(factor=0.2, name='Bringhtness'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='MaxPool_1'))
 model.add(Conv2D(128, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_2'))
 model.add(RandomTranslation(height_factor=(-0.2, 0.3), width_factor=(-0.2, 0.3),fill_mode="reflect", name='RandomTranslation'))
@@ -234,30 +236,30 @@ model.compile(optimizer=adam_optimizer, loss='categorical_crossentropy', metrics
 model.summary()
 
 checkpoints = get_checkpoints(wavelet, experimento)
-early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='auto')
+early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='max', restore_best_weights=True)
 csv_logger = get_csv_logger(wavelet, experimento)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, min_lr=0.001)
 
 # Generar el diagrama de la arquitectura
-plot_model(model, to_file='plot_model/model_WCNN_arc2a-5.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
+plot_model(model, to_file='plot_model/model_WCNN_arc2a-7.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
 
-print('Using real-time data augmentation.')
-# Configuramos el generador de imágenes con las transformaciones deseadas
-datagen = ImageDataGenerator(
-    rotation_range=20,  # Rango de rotación aleatoria en grados
-    width_shift_range=0.2,  # Rango de traslación horizontal aleatoria
-    height_shift_range=0.2,  # Rango de traslación vertical aleatoria
-    shear_range=0.2,  # Rango de corte aleatorio
-    zoom_range=0.2,  # Rango de zoom aleatorio
-    horizontal_flip=True,  # Volteo horizontal aleatorio
-    fill_mode='nearest'  # Modo de llenado para valores fuera: de los límites de la imagen
-)
+# print('Using real-time data augmentation.')
+# # Configuramos el generador de imágenes con las transformaciones deseadas
+# datagen = ImageDataGenerator(
+#     rotation_range=20,  # Rango de rotación aleatoria en grados
+#     width_shift_range=0.2,  # Rango de traslación horizontal aleatoria
+#     height_shift_range=0.2,  # Rango de traslación vertical aleatoria
+#     shear_range=0.2,  # Rango de corte aleatorio
+#     zoom_range=0.2,  # Rango de zoom aleatorio
+#     horizontal_flip=True,  # Volteo horizontal aleatorio
+#     fill_mode='nearest'  # Modo de llenado para valores fuera: de los límites de la imagen
+# )
 
-# Ajustamos el generador a los datos de entrenamiento
-datagen.fit(X_train_normalized_reshaped)
+# # Ajustamos el generador a los datos de entrenamiento
+# datagen.fit(X_train_normalized_reshaped)
 
 # Entrenamos el modelo con data augmentation
-history = model.fit(datagen.flow(X_train_normalized_reshaped, y_train_normalized[2], batch_size=batch_size),
+history = model.fit(X_train_normalized_reshaped, y_train_normalized[2], batch_size=batch_size,
                     epochs=epochs, 
                     validation_data=(X_test_normalized[2], y_test_normalized[2]),
                     shuffle=True,
