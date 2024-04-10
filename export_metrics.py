@@ -1,10 +1,10 @@
-import os 
+import os, csv 
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from keras.models import Sequential
-from keras.layers import Dense, Input
+#from keras.models import Sequential
+#from keras.layers import Dense, Input
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 def create_directories(*dirs):
@@ -26,8 +26,11 @@ def save_results(loss, accuracy, y_true, y_pred, wavelet, experiment, save_metri
         experiment (int): Número del experimento.
         save_metrics (bool, optional): Indica si se deben guardar las métricas en un archivo CSV. Por defecto es True.
     """
+    cal_accuracy = calculate_accuracy(y_true, y_pred)
     precision = calculate_precision(y_true, y_pred)
     conf_matrix = calculate_confusion_matrix(y_true, y_pred)
+    cal_recall = calculate_recall(y_true, y_pred)
+    cal_f1 = calculate_f1_score(y_true, y_pred)
 
     base_dir = 'metrics'
     metrics_result_dir = os.path.join(base_dir, f'{wavelet}-experiment')
@@ -36,23 +39,36 @@ def save_results(loss, accuracy, y_true, y_pred, wavelet, experiment, save_metri
     create_directories(metrics_result_dir, *sub_dirs)
 
     # Guardar resultados en un archivo CSV
-    results_dict = {'Loss': loss, 'Accuracy': accuracy, 'Precision': precision, 'Confusion Matrix': conf_matrix}
+    results_dict = {'Loss': loss,
+                    'Accuracy': accuracy,
+                    'Precision': precision,
+                    'Cal-Accuracy':cal_accuracy, 
+                    'Cal_Recall':cal_recall, 
+                    'Cal_f1_score':cal_f1, 
+                    'Confusion Matrix': conf_matrix}
     csv_result_export = os.path.join(sub_dirs[1], f"model_FDM-{wavelet}-{experiment}-metrics_result.csv")
     results_df = pd.DataFrame.from_dict(results_dict, orient='index', columns=['Value'])
-
     if save_metrics:
-        results_df.to_csv(csv_result_export)
-
+        with open(csv_result_export, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["Metric", "Value"])
+            for key, value in results_dict.items():
+                writer.writerow([key, value])
+    
+        
+    
     # Graficar la matriz de confusión
     conf_matrix_export = os.path.join(sub_dirs[0], f"model_FDM-{wavelet}-{experiment}-conf_matrix.png")
     plt.figure(figsize=(8, 6))
-    sns.heatmap(conf_matrix, annot=True, cmap='Blues', fmt='g')
+    sns.heatmap(conf_matrix, annot=True, cmap='Reds', fmt='g')
     plt.xlabel('Predicted labels')
     plt.ylabel('True labels')
     plt.title('Confusion Matrix')
     if save_metrics:
         plt.savefig(conf_matrix_export)
     plt.close()
+
+    print("Results saved successfully.")
 
 
 def plot_performance(history, wavelet, experiment, save_fig=True, fig_title='Model Performance'):
@@ -134,6 +150,7 @@ def plot_performance(history, wavelet, experiment, save_fig=True, fig_title='Mod
             plt
             plt.savefig(graph_metrics_export_4)
         plt.close()
+        print("Plots saved successfully.")
     else:
         print("El historial de entrenamiento no contiene la información necesaria para graficar el rendimiento.")
 
@@ -157,9 +174,42 @@ def calculate_f1_score(y_true, y_pred, average='weighted'):
 def calculate_confusion_matrix(y_true, y_pred):
     """Calcula la matriz de confusión del modelo."""
     return confusion_matrix(y_true, y_pred)
+
+
+def save_parameters(params_dict, wavelet, experiment):
+    """
+    Guarda los parámetros utilizados en la función en un archivo CSV.
+
+    Args:
+        params_dict (dict): Diccionario que contiene los nombres de los parámetros como claves y sus valores.
+        wavelet (str): Tipo de wavelet utilizado en el experimento.
+        experiment (int): Número del experimento.
+    """
+    base_dir = 'metrics'
+    params_result_dir = os.path.join(base_dir, f'{wavelet}-experiment')
+    os.makedirs(params_result_dir, exist_ok=True)
+
+    params_export = os.path.join(params_result_dir, f"model_FDM-{wavelet}-{experiment}-parameters.csv")
+
+    with open(params_export, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["Parameter", "Value"])
+        for key, value in params_dict.items():
+            writer.writerow([key, value])
+
+    print("Parameters saved successfully.")
 '''
+#Parametros de prueba
 wavelet = 'haar'
 experimento = 1
+image_size=(300, 300)
+n_imagenes=100
+INIT_LR = 0.022
+batch_size = 32
+weight_decay = 0.5
+experimento = 1
+epochs=100
+
 # Genera datos de ejemplo
 X_train = np.random.rand(100, 10)
 y_train = np.random.randint(0, 2, size=100)
@@ -168,21 +218,29 @@ y_test = np.random.randint(0, 2, size=20)
 
 # Define y entrena el modelo
 model = Sequential()
-model.add(Input(shape=(10,)))  # Capa de entrada con forma (10,)
-model.add(Dense(1, activation='sigmoid'))  # Capa oculta
+model.add(Input(shape=(10,)))
+model.add(Dense(1, activation='sigmoid'))
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-
+#Historial
 history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test), verbose=0)
 predictions = model.predict(X_test)
-# Umbralizar las predicciones
 threshold = 0.5
 predicted_classes = (predictions > threshold).astype("int32")
-
-# Evaluar el modelo y guardar los resultados
 loss, accuracy = model.evaluate(X_test, y_test)
 
+params_dict = {
+    "image_size": image_size,
+    "n_imagenes": n_imagenes,
+    "wavelet": wavelet,
+    "INIT_LR": INIT_LR,
+    "epochs": epochs,
+    "batch_size": batch_size,
+    "weight_decay": weight_decay,
+    "experimento": experimento,
+}
+
+save_parameters(params_dict, wavelet, experimento)
 save_results(loss, accuracy, y_test, predicted_classes, wavelet, experimento)
-# Opcionalmente, grafica el rendimiento del modelo a lo largo del entrenamiento
 plot_performance(history, wavelet, experimento)
 '''
