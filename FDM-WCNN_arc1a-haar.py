@@ -1,18 +1,22 @@
 import pywt, os, cv2
-import matplotlib.pyplot as plt
 import numpy as np
-from manager_checkpointers import get_checkpoints
-from manage_csv_logger import get_csv_logger
+import matplotlib.pyplot as plt
+
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+
 from keras.models import Sequential, Model
 from keras.callbacks import EarlyStopping, CSVLogger, ReduceLROnPlateau
 from keras.optimizers import Adam
 from keras.preprocessing import image
 from keras.utils import to_categorical, plot_model
 from keras.layers import Input, Conv2D, MaxPooling2D, concatenate, GlobalAveragePooling2D, Dropout, Dense, Rescaling, RandomFlip
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+
+from utils.manager_checkpointers import get_checkpoints
+from utils.manage_csv_logger import get_csv_logger
+from utils import export_metrics
 
 # Definir una función de normalización
 def normalize_data(data):
@@ -177,12 +181,11 @@ dataset_names = ["X_train0", "X_test0", "y_train0", "y_test_0","X_train1", "X_te
 for dataset, name in zip(datasets, dataset_names):
     print(f"Tamaño de {name}: {dataset.shape}")
 
-# Inicializar el escalador
-scaler = MinMaxScaler()
-
 # Aplicar la función de normalización utilizando map
 X_train_normalized = list(map(normalize_data, [X_train1, X_train2, X_train3]))
 X_test_normalized = list(map(normalize_data, [X_test1, X_test2, X_test3]))
+y_train_normalized = list(map(None, [y_train1, y_train2, y_train3]))
+y_test_normalized = list(map(None, [y_test1, y_test2, y_test3]))
 
 # Imprimir la forma de cada conjunto de datos normalizado
 for i, (X_train, X_test, y_train, y_test) in enumerate(zip(X_train_normalized, X_test_normalized, y_train_normalized, y_test_normalized), start=1):
@@ -254,14 +257,28 @@ history = model.fit(datagen.flow(X_train_normalized[2], y_train_normalized[2], b
                     callbacks=[checkpointer, early, csv_logger, reduce_lr])
 #------------------------------------------------------------#
 #-------------Metricas de evalucion del modelo---------------#
+params_dict = {
+    "image_size": image_size,
+    "n_imagenes": n_imagenes,
+    "wavelet": wavelet,
+    "INIT_LR": INIT_LR,
+    "epochs": epochs,
+    "batch_size": batch_size,
+    "weight_decay": weight_decay,
+    "experimento": experimento,
+}
+
 loss, accuracy = model.evaluate(X_test_normalized[2], y_test_normalized[2])
 print(f'Precisión del modelo en los datos de prueba: {accuracy*100:.2f} \n Funcion de perdida: {loss*100:.2f}')
 
 # Predicciones del conjunto de prueba
-predictions = model.predict(X_test2)
+predictions = model.predict(X_test_normalized[2])
 y_pred_classes = np.argmax(predictions, axis=1)
-# Codificar las etiquetas de prueba a one-hot encoding
-y_test_classes = np.argmax(y_test, axis=1)
+y_test_classes = np.argmax(y_test_normalized[2], axis=1)
+
+save_parameters(params_dict, wavelet, experimento)
+save_results(loss, accuracy, y_test_classes, y_pred_clsses, wavelet, experimento)
+plot_performance(history, wavelet, experimento)
 
 # Calcular métricas de evaluación
 accuracy = accuracy_score(y_test_classes, y_pred_classes)
