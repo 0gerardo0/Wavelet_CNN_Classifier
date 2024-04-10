@@ -5,11 +5,6 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-import tensorflow as tf
-print("CUDA GPU available:", tf.config.list_physical_devices('GPU'))
-
-input("Tensorflow")
 
 from keras.models import Sequential, Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
