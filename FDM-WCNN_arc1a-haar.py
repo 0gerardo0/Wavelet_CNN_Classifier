@@ -11,8 +11,7 @@ from keras.callbacks import EarlyStopping, CSVLogger, ReduceLROnPlateau
 from keras.optimizers import Adam
 from keras.preprocessing import image
 from keras.utils import to_categorical, plot_model
-from keras.preprocessing import ImageDataGenerator
-from keras.layers import Input, Conv2D, MaxPooling2D, concatenate, GlobalAveragePooling2D, Dropout, Dense
+from keras.layers import Input, Conv2D, MaxPooling2D, concatenate, GlobalAveragePooling2D, Dropout, Dense, Rescaling, RandomFlip
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 # Definir una función de normalización
@@ -55,7 +54,6 @@ for i, categoria in enumerate(categorias):
             # Cargar y preprocesar la imagen con Keras (a escala de grises)
             img = image.load_img(imagen_path, target_size=image_size, color_mode="grayscale")
             img_array = image.img_to_array(img)
-
             # Agregar datos y etiquetas
             data.append(img_array)
             labels.append(i)
@@ -207,7 +205,9 @@ experimento=1
 #-------------------------------------------------------------#
 #-------------Arquitectura del modelo CNN---------------------#
 model = Sequential()
-model.add(Conv2D(64, (3, 3), strides=1, padding='same', activation='relu', input_shape=(38, 38, 1), name='Conv2D_1'))
+model.add(Rescaling(1./255, name='Rescaling'))
+model.add(RandomFlip("horizontal_and_vertical", seed=None, name='RandomFlip'))
+model.add(Conv2D(64, (3, 3), strides=1, padding='same', activation='relu', input_shape=(img_height3, img_height3, 1), name='Conv2D_1'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='MaxPool_1'))
 model.add(Conv2D(128, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_2'))
 model.add(Conv2D(128, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_3'))
@@ -233,7 +233,7 @@ plot_model(model, to_file='model_WCNN_arc1a-2.png', show_shapes=True, show_layer
 
 print('Using real-time data augmentation.')
 # Configuramos el generador de imágenes con las transformaciones deseadas
-datagen = ImageDataGenerator(
+datagen = image.ImageDataGenerator(
     rotation_range=20,  # Rango de rotación aleatoria en grados
     width_shift_range=0.2,  # Rango de traslación horizontal aleatoria
     height_shift_range=0.2,  # Rango de traslación vertical aleatoria
