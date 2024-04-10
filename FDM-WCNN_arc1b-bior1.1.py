@@ -236,7 +236,7 @@ model.compile(optimizer=adam_optimizer, loss='categorical_crossentropy', metrics
 model.summary()
 
 checkpoints = get_checkpoints(wavelet, experimento)
-early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='max', restore_best_weights=True)
+early = EarlyStopping(monitor='val_accuracy', min_delta=0, patience=10, verbose=1, mode='max', restore_best_weights=True)
 csv_logger = get_csv_logger(wavelet, experimento)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, min_lr=0.001)
 

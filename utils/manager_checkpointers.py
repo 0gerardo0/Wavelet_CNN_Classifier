@@ -43,7 +43,7 @@ def get_checkpoints(wavelet, experiment):
         list: Lista de objetos ModelCheckpoint configurados para guardar los mejores modelos durante el entrenamiento.
     """
     checkpointers = []
-    metrics_to_monitor = ['val_loss', 'val_acc', 'loss', 'acc']
+    metrics_to_monitor = ['accuracy', 'loss', 'val_accuracy', 'val_loss']
     for metric in metrics_to_monitor:
         checkpoint_directory = f'saves/checkpointer/{wavelet}-experiment/'
         checkpointers.append(create_checkpoint(checkpoint_directory, metric, experiment))
