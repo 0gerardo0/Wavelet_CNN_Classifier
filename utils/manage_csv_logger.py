@@ -31,8 +31,8 @@ def get_csv_logger(wavelet, experiment):
         CSVLogger: Objeto CSVLogger configurado para guardar registros en el archivo CSV correspondiente al experimento.
     """
     csv_directory=f'saves/csv_logger/{wavelet}-experiment/'
-    print('CSVLogger saved successfully.')
     csv_logger=create_csv_logger(csv_directory, wavelet, experiment)
+    print('CSVLogger saved successfully.')
     return csv_logger
 
 # prueba
