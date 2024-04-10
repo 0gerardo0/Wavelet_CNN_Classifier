@@ -45,7 +45,7 @@ categorias = os.listdir(dataset_dir)
 print(f'Categorías: {categorias}')
 
 #wavelets_prueba = ['haar', 'db10', 'sym2', 'coif1', 'bior1.1']
-wavelet = "haar"
+wavelet = "coif1"
 niveles1, niveles2, niveles3 = 1, 2, 3
 
 # Cargar imágenes y asignar etiquetas

@@ -243,7 +243,8 @@ reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, min_lr
 # Generar el diagrama de la arquitectura
 plot_model(model, to_file='plot_model/model_WCNN_arc2a-7.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
 
-# print('Using real-time data augmentation.')
+print('Using real-time data augmentation.')
+
 # # Configuramos el generador de imágenes con las transformaciones deseadas
 # datagen = ImageDataGenerator(
 #     rotation_range=20,  # Rango de rotación aleatoria en grados

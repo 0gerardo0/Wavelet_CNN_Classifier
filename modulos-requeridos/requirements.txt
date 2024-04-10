@@ -9,3 +9,6 @@ scikit-image
 #keras
 #tensorflow
 pydot
+csv
+pandas
+seaborn
