@@ -17,6 +17,8 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 # Definir una función de normalización
 def normalize_data(data):
+    # Inicializar el escalador
+    scaler = MinMaxScaler()
     return scaler.fit_transform(data.reshape(-1, data.shape[-1])).reshape(data.shape)
 
 #Parametros para iniciales de imagenes
@@ -183,8 +185,6 @@ scaler = MinMaxScaler()
 # Aplicar la función de normalización utilizando map
 X_train_normalized = list(map(normalize_data, [X_train1, X_train2, X_train3]))
 X_test_normalized = list(map(normalize_data, [X_test1, X_test2, X_test3]))
-y_train_normalized = list(map(normalize_data, [y_train1, y_train2, y_train3]))
-y_test_normalized = list(map(normalize_data, [y_test1, y_test2, y_test3]))
 
 # Imprimir la forma de cada conjunto de datos normalizado
 for i, (X_train, X_test, y_train, y_test) in enumerate(zip(X_train_normalized, X_test_normalized, y_train_normalized, y_test_normalized), start=1):
@@ -202,7 +202,6 @@ img_width, img_height = 300, 300
 img_width1, img_height1 = 150, 150
 img_width2, img_height2 = 75, 75
 img_width3, img_height3 = 38, 38
-data_generation = True  # Cambia a True para habilitar la data augmentation
 weight_decay = 0.0005
 experimento=1
 #-------------------------------------------------------------#
@@ -219,13 +218,10 @@ model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='M
 model.add(GlobalAveragePooling2D(name='GlobalAvgPool'))
 model.add(Dropout(0.2, name='Dropout'))
 model.add(Dense(10, activation='softmax', name='Output'))
-# Definir el optimizador Adam con weight_decay
-adam_optimizer = Adam(lr=INIT_LR, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=weight_decay)
 
-# Compilar el modelo con el optimizador personalizado
+adam_optimizer = Adam(lr=INIT_LR, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=weight_decay)
 model.compile(optimizer=adam_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
-
 
 checkpoints = get_checkpoints(wavelet, experimento)
 early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='auto')
@@ -253,8 +249,9 @@ datagen.fit(X_train_normalized[2])
 # Entrenamos el modelo con data augmentation
 history = model.fit(datagen.flow(X_train_normalized[2], y_train_normalized[2], batch_size=batch_size),
                     epochs=epochs, 
-                    validation_split=0.1, 
-                    callbacks=[checkpointer, early, LearningRateScheduler(lr_schedule), csv_logger, reduce_lr])
+                    validation_data=(X_test_normalized[2], y_test_normalized[2]),
+                    shuffle=True,
+                    callbacks=[checkpointer, early, csv_logger, reduce_lr])
 #------------------------------------------------------------#
 #-------------Metricas de evalucion del modelo---------------#
 loss, accuracy = model.evaluate(X_test_normalized[2], y_test_normalized[2])
