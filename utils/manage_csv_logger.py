@@ -34,8 +34,9 @@ def get_csv_logger(wavelet, experiment):
     csv_logger=create_csv_logger(csv_directory, wavelet, experiment)
     print('CSVLogger saved successfully.')
     return csv_logger
-
+'''
 # prueba
 wavelet = 'haar'
 experiment = 1
 csv_logger = get_csv_logger(wavelet, experiment)
+'''
