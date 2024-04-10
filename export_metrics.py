@@ -66,29 +66,73 @@ def plot_performance(history, wavelet, experiment, save_fig=True, fig_title='Mod
         save_fig (bool, optional): Indica si se debe guardar la figura como un archivo. Por defecto es True.
         fig_title (str, optional): Título de la gráfica. Por defecto es 'Model Performance'.
     """
-    
     base_dir = 'metrics'
     metrics_result_dir = os.path.join(base_dir, f'{wavelet}-experiment')
     subdirectories = ['graph_history']
     sub_dirs = [os.path.join(metrics_result_dir, sub) for sub in subdirectories]
     create_directories(metrics_result_dir, *sub_dirs)
 
+    
     if 'accuracy' in history.history and 'val_accuracy' in history.history and 'loss' in history.history and 'val_loss' in history.history:
         # Graficar la precisión y la pérdida
-        graph_metrics_export = os.path.join(sub_dirs[0], f"model_FDM-{wavelet}-{experiment}-conf_matrix.png")
-        plt.plot(history.history['accuracy'], label='Accuracy')
-        plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-        plt.plot(history.history['loss'], label='Loss')
-        plt.plot(history.history['val_loss'], label='Validation Loss')
+        graph_metrics_export = os.path.join(sub_dirs[0], f"model_FDM-{wavelet}-{experiment}-graph_val.png")
+        plt.plot(history.history['accuracy'], '-c',  label='Training Accuracy')
+        plt.plot(history.history['val_accuracy'], '-b', label='Validation Accuracy')
+        plt.plot(history.history['loss'], '--y', label='Training Loss')
+        plt.plot(history.history['val_loss'], '--g', label='Validation Loss')
         plt.xlabel('Epoch')
         plt.ylabel('Value')
-        plt.title(fig_title)
-        plt.legend()
-
-        # Guardar la figura si se especifica
+        plt.title('Training and Validation Metrics')
+        plt.legend(loc='best')
         if save_fig:
             plt.savefig(graph_metrics_export)
-        #plt.show()
+        plt.close()
+
+        graph_metrics_export_2 = os.path.join(sub_dirs[0], f"model_FDM-{wavelet}-{experiment}-val-acc_loss.png")
+        plt.plot(history.history['val_accuracy'], '--y', label='Validation Accuracy')
+        plt.plot(history.history['val_loss'], '--g', label='Validation Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Value')
+        plt.title('Validation Accuracy and Loss')
+        plt.legend(loc='best')
+        if save_fig:
+            plt.savefig(graph_metrics_export_2)
+        plt.close()
+        
+        graph_metrics_export_3 = os.path.join(sub_dirs[0], f"model_FDM-{wavelet}-{experiment}-acc_loss.png")
+        plt.plot(history.history['accuracy'], label='Training Accuracy')
+        plt.plot(history.history['loss'], '--y', label='Training Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Value')
+        plt.title('Training Accuracy and Loss')
+        plt.legend(loc='best')
+        if save_fig:
+            plt.savefig(graph_metrics_export_3)
+        plt.close()
+
+        plt.figure(figsize=(10, 8))
+        graph_metrics_export_4 = os.path.join(sub_dirs[0], f"model_FDM-{wavelet}-{experiment}-performance.png")
+        plt.subplot(2, 1, 1)
+        plt.plot(history.history['accuracy'], '-b', label='Training Accuracy')
+        plt.plot(history.history['val_accuracy'], '-c', label='Validation Accuracy')
+        plt.title('Training and Validation Accuracy')
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy')
+        plt.legend(loc='best')
+        plt.grid(True)
+
+        plt.subplot(2, 1, 2)
+        plt.plot(history.history['loss'], '--y', label='Training Loss')
+        plt.plot(history.history['val_loss'], '--g', label='Validation Loss')
+        plt.title('Training and Validation Loss')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend(loc='best')
+        plt.grid(True)
+        plt.subplots_adjust(hspace=0.3)
+        if save_fig:
+            plt
+            plt.savefig(graph_metrics_export_4)
         plt.close()
     else:
         print("El historial de entrenamiento no contiene la información necesaria para graficar el rendimiento.")
@@ -113,7 +157,7 @@ def calculate_f1_score(y_true, y_pred, average='weighted'):
 def calculate_confusion_matrix(y_true, y_pred):
     """Calcula la matriz de confusión del modelo."""
     return confusion_matrix(y_true, y_pred)
-
+'''
 wavelet = 'haar'
 experimento = 1
 # Genera datos de ejemplo
@@ -141,3 +185,4 @@ loss, accuracy = model.evaluate(X_test, y_test)
 save_results(loss, accuracy, y_test, predicted_classes, wavelet, experimento)
 # Opcionalmente, grafica el rendimiento del modelo a lo largo del entrenamiento
 plot_performance(history, wavelet, experimento)
+'''
