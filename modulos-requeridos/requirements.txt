@@ -6,6 +6,6 @@ opencv-python
 ipython
 PyQt5
 scikit-image
-keras
-tensorflow
+#keras
+#tensorflow
 pydot
