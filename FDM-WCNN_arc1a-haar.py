@@ -2,6 +2,7 @@ import pywt, os, cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from manager_checkpointers import get_checkpoints
+from manage_csv_logger import get_csv_logger
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
@@ -203,6 +204,7 @@ img_width2, img_height2 = 75, 75
 img_width3, img_height3 = 38, 38
 data_generation = True  # Cambia a True para habilitar la data augmentation
 weight_decay = 0.0005
+experimento=1
 #-------------------------------------------------------------#
 #-------------Arquitectura del modelo CNN---------------------#
 model = Sequential()
@@ -224,9 +226,10 @@ adam_optimizer = Adam(lr=INIT_LR, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay
 model.compile(optimizer=adam_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
 
-checkpoints = get_checkpoints(wavelet, experiment)
+
+checkpoints = get_checkpoints(wavelet, experimento)
 early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='auto')
-csv_logger = CSVLogger('model_history.csv', append=True)
+csv_logger = get_csv_logger(wavelet, experimento)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, min_lr=0.001)
 
 # Generar el diagrama de la arquitectura
