@@ -1,14 +1,16 @@
 import pywt, os, cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.preprocessing import image
-from keras.utils import to_categorical, plot_model
-from keras.preprocessing import ImageDataGenerator
+from manager_checkpointers import get_checkpoints
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, Model
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, CSVLogger, ReduceLROnPlateau
+from keras.optimizers import Adam
+from keras.preprocessing import image
+from keras.utils import to_categorical, plot_model
+from keras.preprocessing import ImageDataGenerator
 from keras.layers import Input, Conv2D, MaxPooling2D, concatenate, GlobalAveragePooling2D, Dropout, Dense
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
@@ -181,7 +183,7 @@ scaler = MinMaxScaler()
 X_train_normalized = list(map(normalize_data, [X_train1, X_train2, X_train3]))
 X_test_normalized = list(map(normalize_data, [X_test1, X_test2, X_test3]))
 y_train_normalized = list(map(normalize_data, [y_train1, y_train2, y_train3]))
-y_test_normalized = list(map(normalize_data, [y_test1, y_test2, y_test3]))1
+y_test_normalized = list(map(normalize_data, [y_test1, y_test2, y_test3]))
 
 # Imprimir la forma de cada conjunto de datos normalizado
 for i, (X_train, X_test, y_train, y_test) in enumerate(zip(X_train_normalized, X_test_normalized, y_train_normalized, y_test_normalized), start=1):
@@ -215,12 +217,20 @@ model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='M
 model.add(GlobalAveragePooling2D(name='GlobalAvgPool'))
 model.add(Dropout(0.2, name='Dropout'))
 model.add(Dense(10, activation='softmax', name='Output'))
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# Definir el optimizador Adam con weight_decay
+adam_optimizer = Adam(lr=INIT_LR, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=weight_decay)
+
+# Compilar el modelo con el optimizador personalizado
+model.compile(optimizer=adam_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
+
+checkpoints = get_checkpoints(wavelet, experiment)
+early = EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=1, mode='auto')
+csv_logger = CSVLogger('model_history.csv', append=True)
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, min_lr=0.001)
 
 # Generar el diagrama de la arquitectura
 plot_model(model, to_file='model_WCNN_arc1a-2.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
-early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
 print('Using real-time data augmentation.')
 # Configuramos el generador de imágenes con las transformaciones deseadas
