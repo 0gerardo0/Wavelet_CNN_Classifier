@@ -1,0 +1,9 @@
+Parameter,Value
+image_size,"(300, 300)"
+n_imagenes,100
+wavelet,sym2
+INIT_LR,0.001
+epochs,100
+batch_size,32
+num_class,10
+experimento,3
