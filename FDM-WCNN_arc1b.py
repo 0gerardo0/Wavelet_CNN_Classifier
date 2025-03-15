@@ -1,4 +1,4 @@
-import pywt, os, cv2
+import pywt, os, cv2, time
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -45,7 +45,7 @@ categorias = os.listdir(dataset_dir)
 print(f'Categorías: {categorias}')
 
 #wavelets_prueba = ['haar', 'db10', 'sym2', 'coif1', 'bior1.1']
-wavelet = ''
+wavelet = 'haar'
 niveles1, niveles2, niveles3 = 1, 2, 3
 
 # Cargar imágenes y asignar etiquetas
@@ -73,8 +73,8 @@ for i, categoria in enumerate(categorias):
 # Convertir a matrices NumPy
 data = np.array(data, dtype=np.float64)
 labels = np.array(labels)
-print(f"Dimensiones de data después de convertir a matrices NumPy: {data.shape}")
-print(f"Dimensiones de etiquetas después de convertir a matrices NumPy: {labels.shape}")
+print(f"Dimensiones de datos: {data.shape}")
+print(f"Dimensiones de etiquetas: {labels.shape}")
 
 # Codificar las etiquetas a one-hot encoding
 labels_or = to_categorical(labels, num_classes=10)
@@ -84,9 +84,10 @@ print(labels_or.shape)
 for label in labels:
     repeated_labels = np.array([label] * 4)
     labelsDWT = np.concatenate((labelsDWT, repeated_labels))
-# Verificar la longitud de las nuevas etiquetas (debería ser igual al número de características extraídas + 1)
 print("Número de nuevas etiquetas:", len(labelsDWT))
 #---------------Extraccion de caracteristicas Wavelet---------------#
+start_time = time.time()
+
 for imagen_array in data:
     if len(imagen_array.shape) == 3:
         imagen_array = imagen_array[:, :, 0]
@@ -142,30 +143,31 @@ for imagen_array in data:
     DATA_DWT.append(cD2)
 
 print('Descomposición de 3 nivel completada con éxito...')
-
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f"Tiempo transcurrido: {elapsed_time} segundos")
 # Convertir listas a matrices NumPy
 dataDWT_cA3, dataDWT_cH3, dataDWT_cV3, dataDWT_cD3 = map(np.array, (dataDWT_cA3, dataDWT_cH3, dataDWT_cV3, dataDWT_cD3))
 dataDWT_cA2, dataDWT_cH2, dataDWT_cV2, dataDWT_cD2 = map(np.array, (dataDWT_cA2, dataDWT_cH2, dataDWT_cV2, dataDWT_cD2))
 dataDWT_cA1, dataDWT_cH1, dataDWT_cV1, dataDWT_cD1 = map(np.array, (dataDWT_cA1, dataDWT_cH1, dataDWT_cV1, dataDWT_cD1))
-#---------------------------------------------------------#
 
 # Imprimir las dimensiones de cada matriz
-print("Dimensiones de dataDWT_cA3 después de convertir a matriz NumPy:", dataDWT_cA3.shape)
-print("Dimensiones de dataDWT_cA2 después de convertir a matriz NumPy:", dataDWT_cA2.shape)
-print("Dimensiones de dataDWT_cA1 después de convertir a matriz NumPy:", dataDWT_cA1.shape)
-print(len(DATA_DWT))
+print("Dimensiones de dataDWT_cA3:", dataDWT_cA3.shape)
+print("Dimensiones de dataDWT_cA2:", dataDWT_cA2.shape)
+print("Dimensiones de dataDWT_cA1:", dataDWT_cA1.shape)
+print("Data completa:", len(DATA_DWT))
+#---------------------------------------------------------#
+dataDWT1=np.concatenate((dataDWT_cA1, dataDWT_cH1, dataDWT_cV1,dataDWT_cD1), axis=0)
+print("Dimensiones concatenadas", dataDWT1.shape)
+dataDWT2=np.concatenate((dataDWT_cA2, dataDWT_cH2, dataDWT_cV2,dataDWT_cD2), axis=0)
+print("Dimensiones concatenadas", dataDWT2.shape)
+dataDWT3=np.concatenate((dataDWT_cA3, dataDWT_cH3, dataDWT_cV3,dataDWT_cD3), axis=0)
+print("Dimensiones concatenadas", dataDWT3.shape)
 
 # Codificar las etiquetas a one-hot encoding
 labels_DWT_oh = to_categorical(labelsDWT, num_classes=10)
 print(labels_DWT_oh.shape)
 print(labels_DWT_oh[800])
-
-dataDWT1=np.concatenate((dataDWT_cA1, dataDWT_cH1, dataDWT_cV1,dataDWT_cD1), axis=0)
-print(dataDWT1.shape)
-dataDWT2=np.concatenate((dataDWT_cA2, dataDWT_cH2, dataDWT_cV2,dataDWT_cD2), axis=0)
-print(dataDWT2.shape)
-dataDWT3=np.concatenate((dataDWT_cA3, dataDWT_cH3, dataDWT_cV3,dataDWT_cD3), axis=0)
-print(dataDWT3.shape)
 
 # Entrenamiento y prueba
 X_train0, X_test0, y_train0, y_test0 = train_test_split(data, labels_or, test_size=0.20, random_state=42)
@@ -207,9 +209,9 @@ batch_size = 32  # Cantidad de imágenes que se toman a la vez en memoria
 # img_width2, img_height2 = 75, 75
 # img_width3, img_height3 = 38, 38
 img_shape = X_train_normalized_reshaped[0].shape
-print("Esto es una tupla de la forma de la imagen que esta en proceso", img_shape)
 n_class=10
-experimento=3
+experimento = 1
+dropout = 0.2
 #-------------------------------------------------------------#
 #-------------Arquitectura del modelo CNN---------------------#
 model = Sequential()
@@ -219,15 +221,15 @@ model.add(Conv2D(64, (3, 3), strides=1, padding='same', activation='relu', name=
 #model.add(RandomBrightness(factor=0.2, name='Bringhtness'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='MaxPool_1'))
 model.add(Conv2D(128, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_2'))
-model.add(RandomTranslation(height_factor=(-0.2, 0.3), width_factor=(-0.2, 0.3),fill_mode="reflect", name='RandomTranslation'))
+#model.add(RandomTranslation(height_factor=(-0.2, 0.3), width_factor=(-0.2, 0.3),fill_mode="reflect", name='RandomTranslation'))
 model.add(Conv2D(128, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_3'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='MaxPool_2'))
 model.add(Conv2D(256, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_4'))
-model.add(RandomFlip("horizontal_and_vertical", seed=None, name='RandomFlip'))
+#model.add(RandomFlip("horizontal_and_vertical", seed=None, name='RandomFlip'))
 model.add(Conv2D(256, (3, 3), strides=1, padding='same', activation='relu', name='Conv2D_5'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2), padding='same', name='MaxPool_3'))
 model.add(GlobalAveragePooling2D(name='GlobalAvgPool'))
-model.add(Dropout(0.2, name='Dropout'))
+model.add(Dropout(dropout, name='Dropout'))
 model.add(Dense(n_class, activation='softmax', name='Output'))
 
 adam_optimizer = Adam(learning_rate=INIT_LR, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
@@ -240,7 +242,7 @@ csv_logger = get_csv_logger(wavelet, experimento)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, min_lr=0.001)
 
 # Generar el diagrama de la arquitectura
-plot_model(model, to_file='plot_model/model_WCNN_arc2a-7.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
+plot_model(model, to_file='plot_model/model_WCNN_arc2a-8.png', show_shapes=True, show_layer_names=True, rankdir='LR', dpi=150)
 
 # print('Using real-time data augmentation.')
 # # Configuramos el generador de imágenes con las transformaciones deseadas
@@ -258,22 +260,32 @@ plot_model(model, to_file='plot_model/model_WCNN_arc2a-7.png', show_shapes=True,
 # datagen.fit(X_train_normalized_reshaped)
 
 # Entrenamos el modelo con data augmentation
+start_time = time.time()
 history = model.fit(X_train_normalized_reshaped, y_train_normalized[2], batch_size=batch_size,
                     epochs=epochs, 
                     validation_data=(X_test_normalized[2], y_test_normalized[2]),
                     shuffle=True,
                     callbacks=[checkpoints, early, csv_logger, reduce_lr])
+# Tiempo de finalización del bloque de código
+end_time = time.time()
+elapsed_time_fit = end_time - start_time
+print(f"Tiempo transcurrido: {elapsed_time_fit} segundos")
 #------------------------------------------------------------#
 #-------------Metricas de evalucion del modelo---------------#
 params_dict = {
     "image_size": image_size,
+    "image_size_DWT": img_shape,
     "n_imagenes": n_imagenes,
     "wavelet": wavelet,
+    "nivel_DWT": niveles3,
     "INIT_LR": INIT_LR,
     "epochs": epochs,
     "batch_size": batch_size,
     "num_class": n_class,
     "experimento": experimento,
+    "Dropout": dropout,
+    "time-DWT": elapsed_time,
+    "time-train": elapsed_time_fit
 }
 
 loss, accuracy = model.evaluate(X_test_normalized[2], y_test_normalized[2])

@@ -9,6 +9,6 @@ scikit-image
 #keras
 #tensorflow
 pydot
-csv
+python-csv
 pandas
 seaborn

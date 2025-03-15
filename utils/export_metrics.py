@@ -3,14 +3,57 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-#from keras.models import Sequential
-#from keras.layers import Dense, Input
+from keras.models import Sequential
+from keras.layers import Dense, Input
+from keras.utils import to_categorical
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 def create_directories(*dirs):
     for directory in dirs:
         if not os.path.exists(directory):
             os.makedirs(directory)
+
+def heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **kwargs):
+    if not ax:
+        ax = plt.gca()
+
+    im = ax.imshow(data, **kwargs)
+
+    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+    ax.set_xticks(np.arange(data.shape[1]))
+    ax.set_yticks(np.arange(data.shape[0]))
+    ax.set_xticklabels(col_labels, rotation=45)
+    ax.set_yticklabels(row_labels)
+    
+    ax.set_xlabel('Etiqueta estimada') 
+    ax.set_ylabel('Etiqueta real')
+    
+    return im, cbar
+
+def annotate_heatmap(im, data=None, fmt="d", threshold=None):
+    texts = []
+    if not isinstance(data, (list, np.ndarray)):
+        data = im.get_array()
+
+    if threshold is not None:
+        threshold = im.norm(threshold)
+    else:
+        threshold = im.norm(data.max()) / 2.
+
+    kw = dict(horizontalalignment="center", verticalalignment="center")
+    if isinstance(fmt, str):
+        fmt = plt.matplotlib.ticker.StrMethodFormatter(fmt)
+
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            kw.update(color="white" if data[i, j] > threshold else "black")
+            text = im.axes.text(j, i, fmt(data[i, j], None), **kw)
+            texts.append(text)
+
+    return texts
 
 def save_results(loss, accuracy, y_true, y_pred, wavelet, experiment, save_metrics=True):
     """
@@ -58,14 +101,20 @@ def save_results(loss, accuracy, y_true, y_pred, wavelet, experiment, save_metri
         
     
     # Graficar la matriz de confusión
-    conf_matrix_export = os.path.join(sub_dirs[0], f"model_FDM-{wavelet}-{experiment}-conf_matrix.png")
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(conf_matrix, annot=True, cmap='Reds', fmt='g')
-    plt.xlabel('Predicted labels')
-    plt.ylabel('True labels')
-    plt.title('Confusion Matrix')
+    labels = ["fabric", "foliage", "glass", "leather", "metal", "paper", "plastic", "stone", "water", "wood"]
+
+    thresh = conf_matrix.max() / 2.
+    conf_matrix_export = os.path.join(sub_dirs[0], f"model_FDM-{wavelet}-{experiment}-conf_matrix.pdf")
+    fig, ax = plt.subplots(figsize=(10, 8))
+    im, cbar = heatmap(conf_matrix, labels, labels, ax=ax, cmap=plt.cm.Reds, cbarlabel="Predicciones")
+    texts = annotate_heatmap(im, data=conf_matrix, threshold=thresh)
+    fig.tight_layout()
+    #sns.heatmap(conf_matrix, annot=True, cmap='Reds', fmt='g')
+    #plt.xlabel('Predicted labels')
+    #plt.ylabel('True labels')
+    #plt.title('Confusion Matrix')
     if save_metrics:
-        plt.savefig(conf_matrix_export)
+        plt.savefig(conf_matrix_export, format='pdf')
     plt.close()
 
     print("Results saved successfully.")
@@ -159,9 +208,9 @@ def calculate_accuracy(y_true, y_pred):
     """Calcula la precisión del modelo."""
     return accuracy_score(y_true, y_pred)
 
-def calculate_precision(y_true, y_pred, average='weighted'):
+def calculate_precision(y_true, y_pred, average='weighted', zero_division=1):
     """Calcula la precisión del modelo."""
-    return precision_score(y_true, y_pred, average=average)
+    return precision_score(y_true, y_pred, average=average, zero_division=1)
 
 def calculate_recall(y_true, y_pred, average='weighted'):
     """Calcula el recall del modelo."""
@@ -197,10 +246,11 @@ def save_parameters(params_dict, wavelet, experiment):
             writer.writerow([key, value])
 
     print("Parameters saved successfully.")
-'''
+
+
 #Parametros de prueba
-wavelet = 'haar'
-experimento = 1
+wavelet = 'prueba'
+experimento = 100
 image_size=(300, 300)
 n_imagenes=100
 INIT_LR = 0.022
@@ -210,22 +260,28 @@ experimento = 1
 epochs=100
 
 # Genera datos de ejemplo
+num_classes = 10
 X_train = np.random.rand(100, 10)
-y_train = np.random.randint(0, 2, size=100)
+y_train = np.random.randint(0, num_classes, size=100)
 X_test = np.random.rand(20, 10)
-y_test = np.random.randint(0, 2, size=20)
+y_test = np.random.randint(0, num_classes, size=20)
+
+# Convertir etiquetas a one-hot encoding
+y_train = to_categorical(y_train, num_classes)
+y_test = to_categorical(y_test, num_classes)
 
 # Define y entrena el modelo
 model = Sequential()
 model.add(Input(shape=(10,)))
-model.add(Dense(1, activation='sigmoid'))
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.add(Dense(64, activation='relu'))
+model.add(Dense(num_classes, activation='softmax'))
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 #Historial
 history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test), verbose=0)
 predictions = model.predict(X_test)
-threshold = 0.5
-predicted_classes = (predictions > threshold).astype("int32")
+predicted_classes = np.argmax(predictions, axis=1)
+y_true_classes = np.argmax(y_test, axis=1)
 loss, accuracy = model.evaluate(X_test, y_test)
 
 params_dict = {
@@ -240,6 +296,5 @@ params_dict = {
 }
 
 save_parameters(params_dict, wavelet, experimento)
-save_results(loss, accuracy, y_test, predicted_classes, wavelet, experimento)
+save_results(loss, accuracy, y_true_classes, predicted_classes, wavelet, experimento)
 plot_performance(history, wavelet, experimento)
-'''
