@@ -1,0 +1,16 @@
+Parameter,Value
+wavelet,sym2
+image_size,"(300, 300)"
+image_size_DWT,"(38, 38, 1)"
+n_imagenes,100
+nivel_DWT,3
+INIT_LR,0.0001
+epochs,200
+batch_size,32
+num_class,10
+experimento,29
+Dropout,0.3
+time-up,24.19256043434143
+time-DWT,243.3714611530304
+time-train,241.7979633808136
+SEED,42
